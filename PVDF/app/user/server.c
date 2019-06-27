@@ -7,66 +7,58 @@
 #include "server.h"
 #include "user_json.h"
 
-LOCAL int ICACHE_FLASH_ATTR
-wifi_station_get(struct jsontree_context *js_ctx)
-{
-    const char *path = jsontree_path_name(js_ctx, js_ctx->depth - 1);
+struct bss_info*bss_link;
 
-    if (os_strncmp(path, "ip", 2) == 0)
-        {
-                jsontree_write_string(js_ctx, "192.168.4.1");
-        }
-        else if (os_strncmp(path, "mask",4) == 0)
-        {
-                 jsontree_write_string(js_ctx, "1");
-        }
-        else if (os_strncmp(path, "power",5) == 0)
-        {
-                 jsontree_write_string(js_ctx,"1");
-        }
-       return 0;
+LOCAL int ICACHE_FLASH_ATTR
+wifi_scan_get(struct jsontree_context *js_ctx) {
+	//uint8_t MAC[18];
+	const char *path = jsontree_path_name(js_ctx, js_ctx->depth - 1);
+
+	if (os_strncmp(path, "ssid", 4) == 0) {
+		jsontree_write_string(js_ctx, bss_link->ssid);
+	}
+	if (os_strncmp(path, "rssi", 4) == 0) {
+			jsontree_write_int(js_ctx, bss_link->rssi);
+		}
+	/*if (os_strncmp(path, "MAC", 3) == 0) {
+		os_sprintf(MACSTR,MAC2STR(bss_link->bssid));
+				jsontree_write_string(js_ctx, MAC);
+		}*/
+
+	return 0;
 }
 
 LOCAL int ICACHE_FLASH_ATTR
-device_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser)
-{
-    int type;
-    uint8_t status,cmd;
+device_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser) {
+	int type;
+	char buffer[32];
+	struct station_config stationConf;
 
-    while ((type = jsonparse_next(parser)) != 0)
-        {
-                if (type == JSON_TYPE_PAIR_NAME)
-                {
-                     if (jsonparse_strcmp_value(parser, "mask") == 0)
-                        {
+	while ((type = jsonparse_next(parser)) != 0) {
+		if (type == JSON_TYPE_PAIR_NAME) {
+			if (jsonparse_strcmp_value(parser, "ssid") == 0) {
 
-                                jsonparse_next(parser);
-                                jsonparse_next(parser);
-                                cmd = jsonparse_get_value_as_int(parser);
-                                 os_printf("cmd=%d",cmd);
-                         }
-                     else if(jsonparse_strcmp_value(parser, "power") == 0)
-                             {
-                                uint8 status;
-                                jsonparse_next(parser);
-                                jsonparse_next(parser);
-                                status = jsonparse_get_value_as_int(parser);
-                                os_printf("status=%d",status);
-                        }
-
-                }
-    }
-    return 0;
+				jsonparse_next(parser);
+				jsonparse_next(parser);
+				jsonparse_copy_value(parser,buffer,sizeof(buffer));
+				os_printf("%s", buffer);
+				os_memcpy(&stationConf.ssid,buffer,32);
+					 os_memcpy(&stationConf.password,"13166982258",64);
+					 wifi_station_set_config_current(&stationConf);
+					 wifi_station_connect();
+					 os_timer_setfn(&connect_timer,wifi_connected,NULL);
+					 os_timer_arm(&connect_timer,2000,NULL);
+			 }
+		   }
+		}
+	return 0;
 }
-
 
 LOCAL struct jsontree_callback wifi_station_callback =
-    JSONTREE_CALLBACK(wifi_station_get, device_parse);
+JSONTREE_CALLBACK(wifi_scan_get, device_parse);
 
-JSONTREE_OBJECT(ip_tree,
-                JSONTREE_PAIR("ip", &wifi_station_callback),
-                JSONTREE_PAIR("mask", &wifi_station_callback),
-                JSONTREE_PAIR("power", &wifi_station_callback));
+JSONTREE_OBJECT(ssid_tree, JSONTREE_PAIR("ssid", &wifi_station_callback),
+		JSONTREE_PAIR("rssi", &wifi_station_callback));
 
 
 void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
@@ -74,11 +66,11 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 	struct jsontree_context js;
 	remot_info *premot = NULL;
 
-	jsontree_setup(&js, (struct jsontree_value *)&ip_tree, json_putchar);
+	jsontree_setup(&js, (struct jsontree_value *) &ssid_tree, json_putchar);
 	json_parse(&js, pdata);
 
 	/*os_printf("local_port3:%d,remote_IP:"IPSTR"\r\n", pesp_conn->proto.tcp->local_port
-			,IP2STR(pesp_conn->proto.tcp->remote_ip));*/
+	 ,IP2STR(pesp_conn->proto.tcp->remote_ip));*/
 
 	espconn_send(pesp_conn, pdata, os_strlen(pdata));
 	//os_printf("%s\r\n", pdata);
@@ -93,39 +85,26 @@ void ICACHE_FLASH_ATTR server_disconcb(void*arg) {
 
 }
 void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
-	uint8 ssid[30];
-	uint8 temp[30];
+
 	uint8 DeviceBuffer[1000] = "wifi list:\r\n";
 	remot_info *premot = NULL;
 	char *pbuf = NULL;
-	pbuf = (char *)os_zalloc(2048);
-	struct espconn *pesp_conn;
-	struct station_config stationConf;
+	pbuf = (char *) os_zalloc(60);
 
 	if (status == OK) {
-		struct bss_info*bss_link = (struct bss_info*) arg;
-		bss_link = bss_link->next.stqe_next;
+		bss_link = (struct bss_info*) arg;
+		//bss_link = bss_link->next.stqe_next;
 		while (bss_link != NULL ) {
-			os_memset(ssid, 0, 30);
-			if (os_strlen(bss_link->ssid) <= 30) {
-				os_memcpy(ssid, bss_link->ssid, os_strlen(bss_link));
-			} else {
-				os_memcpy(ssid, bss_link->ssid, 30);
-			}
-			os_sprintf(temp,"\"%s\"\r\n", ssid);
-			os_strcat(DeviceBuffer,temp);
+			json_ws_send((struct jsontree_value *) &ssid_tree, "ssid_list",pbuf);
+			os_strcat(DeviceBuffer, pbuf);
+			os_memset(pbuf, 0, 60);
 			bss_link = bss_link->next.stqe_next;
 		}
-		json_ws_send((struct jsontree_value *)&ip_tree, "Station", pbuf);
+		os_free(pbuf);
 		/*一般情况，请在前一包数据发送成功，进入 espconn_sent_callback 后，再调用 espconn_send 发送下一包数据。*/
-		espconn_send(&user_tcp_conn, pbuf, strlen(pbuf));
-        os_free(pbuf);
-		/*os_memcpy(&stationConf.ssid,"HUAWEI nova 2s",32);
-		 os_memcpy(&stationConf.password,"13166982258",64);
-		 wifi_station_set_config_current(&stationConf);
-		 wifi_station_connect();
-		 os_timer_setfn(&connect_timer,wifi_connected,NULL);
-		 os_timer_arm(&connect_timer,2000,NULL);*/
+		espconn_send(&user_tcp_conn, DeviceBuffer, strlen(DeviceBuffer));
+
+
 	}
 }
 void ICACHE_FLASH_ATTR server_listen(void *arg) {

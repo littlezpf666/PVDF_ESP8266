@@ -10,5 +10,5 @@
 #include "user_main.h"
 
 void  ICACHE_FLASH_ATTR server_init(int port);
-
+void ICACHE_FLASH_ATTR wifi_connected(void *arg);
 #endif /* APP_USER_SERVER_H_ */
