@@ -8,6 +8,9 @@
 #ifndef APP_USER_USER_MAIN_H_
 #define APP_USER_USER_MAIN_H_
 
+#define UDP_PORT 777
+#define TCP_PORT 888
+
 #include"osapi.h"
 
 #include"user_interface.h"

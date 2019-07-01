@@ -26,7 +26,7 @@ void ICACHE_FLASH_ATTR user_udp_send(void){
 		os_strcat(DeviceBuffer,IPBuffer);
 		os_printf("TCP不存在连接\r\n");
 	}*/
-	espconn_sent(&user_udp_espconn,DeviceBuffer,strlen(DeviceBuffer));
+	espconn_sent(&user_udp_espconn,"success",strlen("success"));
 }
 void ICACHE_FLASH_ATTR user_ubp_sent_cb(void*arg){
 	os_printf("UDP发送完毕!\r\n");
@@ -37,20 +37,25 @@ void ICACHE_FLASH_ATTR user_udp_recv_cb(void *arg,
 {
 		struct	espconn	*pesp_conn	=	arg;
 		remot_info	*premot	=	NULL;
-		const char recev[7]="Mobile";
-		if(!(os_strcmp(pdata,recev)))
+		const char recev1[7]="Mobile";
+		char DeviceBuffer[40]={0};
+		uint8 opmode;
+		if(!(os_strcmp(pdata,recev1)))
 		{
 			os_printf("UDP已接受数据\"%s\"\r\n",pdata);
-			if (espconn_get_connection_info(pesp_conn,&premot,0)==ESPCONN_OK){
-				pesp_conn->proto.udp->remote_port  = premot->remote_port;
-				pesp_conn->proto.udp->remote_ip[0] = premot->remote_ip[0];
-				pesp_conn->proto.udp->remote_ip[1] = premot->remote_ip[1];
-				pesp_conn->proto.udp->remote_ip[2] = premot->remote_ip[2];
-				pesp_conn->proto.udp->remote_ip[3] = premot->remote_ip[3];
-				espconn_sent(pesp_conn,"PVDF0",strlen("PVDF0"));
-		   }
+			opmode=wifi_get_opmode	();
+			os_sprintf(DeviceBuffer,"PVDF0 %d",opmode);
 
 	    }
+		if (espconn_get_connection_info(pesp_conn,&premot,0)==ESPCONN_OK){
+			pesp_conn->proto.udp->remote_port  = premot->remote_port;
+			pesp_conn->proto.udp->remote_ip[0] = premot->remote_ip[0];
+			pesp_conn->proto.udp->remote_ip[1] = premot->remote_ip[1];
+			pesp_conn->proto.udp->remote_ip[2] = premot->remote_ip[2];
+			pesp_conn->proto.udp->remote_ip[3] = premot->remote_ip[3];
+
+			espconn_sent(pesp_conn,DeviceBuffer,strlen(DeviceBuffer));
+		}
 }
 void user_udp_init(int local_port)
 {
