@@ -8,8 +8,10 @@
 #include "user_json.h"
 
 struct bss_info*bss_link;
-LOCAL connect_status = 0;
 struct command rec_comm;
+char connect_status = 0;
+
+
 void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 	static uint8 count=0;
 	uint8 status;
@@ -36,8 +38,8 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 	os_timer_arm(&connect_timer,2000,NULL);
 }
 
-/*****************************CJSON wifi_scan***********************************/
-LOCAL int ICACHE_FLASH_ATTR
+/*****************************CJSON 发送WiFi列表***********************************/
+int ICACHE_FLASH_ATTR
 wifi_scan_get(struct jsontree_context *js_ctx) {
 	//uint8_t MAC[18];
 	const char *path = jsontree_path_name(js_ctx, js_ctx->depth - 1);
@@ -55,47 +57,56 @@ wifi_scan_get(struct jsontree_context *js_ctx) {
 
 	return 0;
 }
-
-/*LOCAL int ICACHE_FLASH_ATTR
-wifi_conn_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser) {
-	int type;
-	char ssid[32];
-	char password[64];
-	struct station_config stationConf;
-
-	while ((type = jsonparse_next(parser)) != 0) {
-		if (type == JSON_TYPE_PAIR_NAME) {
-			if (jsonparse_strcmp_value(parser, "ssid") == 0) {
-				jsonparse_next(parser);
-				jsonparse_next(parser);
-				jsonparse_copy_value(parser,ssid,sizeof(ssid));
-                os_printf("ssid:%s\r\n",ssid);
-				os_memcpy(&stationConf.ssid,ssid,32);
-			 }
-			else if (jsonparse_strcmp_value(parser, "password") == 0) {
-				jsonparse_next(parser);
-				jsonparse_next(parser);
-				jsonparse_copy_value(parser, password, sizeof(password));
-				os_printf("password:%s\r\n", password);
-				os_memcpy(&stationConf.password, password, 64);
-
-				wifi_station_set_config_current(&stationConf);
-				wifi_station_connect();
-				os_timer_setfn(&connect_timer, wifi_connected, NULL);
-				os_timer_arm(&connect_timer, 2000, NULL);
-			 }
-
-		   }
-		}
-	return 0;
-}*/
-
 LOCAL struct jsontree_callback wifi_scan_callback =
 JSONTREE_CALLBACK(wifi_scan_get, NULL);
-
 JSONTREE_OBJECT(ssid_tree, JSONTREE_PAIR("ssid", &wifi_scan_callback),
 		JSONTREE_PAIR("rssi", &wifi_scan_callback));
-LOCAL int ICACHE_FLASH_ATTR
+
+/*****************************CJSON 3接收指令：连接指定wifi***********************************/
+int ICACHE_FLASH_ATTR
+wifi_conn_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser) {
+	int type;
+	int msgobj=0;
+	while ((type = jsonparse_next(parser)) != 0) {
+		if (type == JSON_TYPE_PAIR_NAME) {
+			if (jsonparse_strcmp_value(parser, "MsgObj") == 0) {
+				msgobj = 1;
+			}
+			if (msgobj) {
+				//与上面的"MsgObj"不在同一周期内被捕捉
+				if (jsonparse_strcmp_value(parser, "ssid") == 0) {
+					jsonparse_next(parser);
+					jsonparse_next(parser);
+					jsonparse_copy_value(parser, rec_comm.ssid,
+							sizeof(rec_comm.ssid));
+					os_printf("ssid:%s\r\n", rec_comm.ssid);
+
+				} else if (jsonparse_strcmp_value(parser, "password") == 0) {
+					jsonparse_next(parser);
+					jsonparse_next(parser);
+					jsonparse_copy_value(parser, rec_comm.password,
+							sizeof(rec_comm.password));
+					os_printf("password:%s\r\n", rec_comm.password);
+				}
+			}
+
+		}
+	}
+	return 0;
+}
+
+LOCAL struct jsontree_callback rece_3_tree_callback =
+JSONTREE_CALLBACK(NULL, wifi_conn_parse);
+JSONTREE_OBJECT(wifi_scan_tree, JSONTREE_PAIR("ssid", &rece_3_tree_callback),
+		JSONTREE_PAIR("password", &rece_3_tree_callback)
+		);
+JSONTREE_OBJECT(rece_3_tree, JSONTREE_PAIR("MsgId", &rece_3_tree_callback),
+		JSONTREE_PAIR("MsgObj", &wifi_scan_tree),
+		JSONTREE_PAIR("MsStatus", &rece_3_tree_callback)
+		);
+
+/*****************************CJSON 1245接收指令***********************************/
+int ICACHE_FLASH_ATTR
 rece_1245_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser) {
 	int type;
 
@@ -119,11 +130,7 @@ JSONTREE_OBJECT(rece_1245_tree, JSONTREE_PAIR("MsgId", &rece_1245_callback),
 		JSONTREE_PAIR("MsgStatus", &rece_1245_callback),
 		);
 
-/*LOCAL struct jsontree_callback wifi_conn_callback =
-JSONTREE_CALLBACK(NULL, wifi_conn_parse);
 
-JSONTREE_OBJECT(conn_tree, JSONTREE_PAIR("ssid", &wifi_conn_callback),
-		JSONTREE_PAIR("password", &wifi_conn_callback));*/
 /*****************************扫描回调***********************************/
 void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 
@@ -197,7 +204,9 @@ uint16_t ICACHE_FLASH_ATTR comtype_parse(char* pdata,char* key)
 void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 		struct espconn *pesp_conn = arg;
 		struct jsontree_context js;
+		struct station_config stationConf;
 		remot_info *premot = NULL;
+
 		char* key="MsgId";
 		char* key_value="scan";
 
@@ -215,6 +224,15 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				}
 			break;
 		case 3:
+			jsontree_setup(&js, (struct jsontree_value *) &rece_3_tree,json_putchar);
+			json_parse(&js, pdata);
+			os_memcpy(&stationConf.ssid, rec_comm.ssid, 32);
+			os_memcpy(&stationConf.password, rec_comm.password, 64);
+			wifi_station_set_config_current(&stationConf);
+			wifi_station_connect();
+			os_timer_setfn(&connect_timer, wifi_connected, NULL);
+			os_timer_arm(&connect_timer, 2000, NULL);
+
 			break;
 		}
 	espconn_send(pesp_conn, pdata, os_strlen(pdata));
