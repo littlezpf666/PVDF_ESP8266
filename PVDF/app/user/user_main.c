@@ -29,9 +29,10 @@ void ICACHE_FLASH_ATTR check_station(void *arg){
 /*************************WiFi连接事件回调函数***********************************/
 void ICACHE_FLASH_ATTR AP_be_connected_cb(System_Event_t *evt){
 	//static uint8 machine_num=0;
+	//os_printf("\r\nWIFI EVENT %d\r\n",evt->event);
 	switch(evt->event){
 	case EVENT_SOFTAPMODE_STACONNECTED:
-		os_printf("\r\nWIFI EVENT %d\r\n",evt->event);
+
 		/*machine_num=wifi_softap_get_station_num();
 		os_printf("machine_num:%d\n",machine_num);
 		st_info=wifi_softap_get_station_info();

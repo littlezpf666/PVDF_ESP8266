@@ -43,7 +43,7 @@ void ICACHE_FLASH_ATTR user_udp_recv_cb(void *arg,
 		if(!(os_strcmp(pdata,recev1)))
 		{
 			os_printf("UDP已接受数据\"%s\"\r\n",pdata);
-			opmode=wifi_get_opmode	();
+			//opmode=wifi_get_opmode();
 			os_sprintf(DeviceBuffer,"PVDF0 %d",opmode);
 
 	    }
