@@ -28,7 +28,8 @@
 #include "driver/uart_register.h"
 #include "mem.h"
 #include "os_type.h"
-
+#include "ip_addr.h"
+#include "espconn.h"
 // UartDev is defined and initialized in rom code.
 extern UartDevice    UartDev;
 
@@ -224,6 +225,7 @@ uart0_rx_intr_handler(void *para)
 	uint8 fifo_len = 0;
 	uint8 d_tmp = 0;
 	uint8 idx=0;
+	remot_info *premot;
 	uart_rx_intr_disable(UART0);
 	WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
 	CLEAR_PERI_REG_MASK(UART_INT_ENA(UART0),UART_TXFIFO_EMPTY_INT_ENA);
@@ -235,7 +237,18 @@ uart0_rx_intr_handler(void *para)
 		 //uart_tx_one_char(UART0, d_tmp);
 	 }
 	os_printf("%s",buffer);
-	espconn_sent(&user_tcp_conn,buffer,strlen(buffer));
+	if (espconn_get_connection_info(&user_tcp_conn,&premot,0)==ESPCONN_OK){
+			os_printf("获取远端IP成功\r\n");
+			os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
+				 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
+			user_tcp_conn.proto.tcp->remote_port  = premot->remote_port;
+			user_tcp_conn.proto.tcp->remote_ip[0] = premot->remote_ip[0];
+			user_tcp_conn.proto.tcp->remote_ip[1] = premot->remote_ip[1];
+			user_tcp_conn.proto.tcp->remote_ip[2] = premot->remote_ip[2];
+			user_tcp_conn.proto.tcp->remote_ip[3] = premot->remote_ip[3];
+			os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
+						 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
+	espconn_send(&user_tcp_conn,buffer,strlen(buffer));}
 	WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR|UART_RXFIFO_TOUT_INT_CLR);
 	uart_rx_intr_enable(UART0);
 }

@@ -38,4 +38,8 @@ int json_putchar(int c);
 
 struct jsontree_value *find_json_path(struct jsontree_context *json, const char *path);
 
+int ICACHE_FLASH_ATTR value_as_int(char *key_value,char length);
+
+uint16_t ICACHE_FLASH_ATTR comtype_parse(char* pdata,char* key);
+
 #endif

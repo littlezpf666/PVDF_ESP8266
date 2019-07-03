@@ -12,7 +12,9 @@
 struct command
 {
 	char MSgId;
-	char MsgObj[7];
+	char opmode;
+	char* device_ip;
+	char MsgObj[9];
 	char CON_STATUS;
 	char ssid[32];
 	char password[64];
