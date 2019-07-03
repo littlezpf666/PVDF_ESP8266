@@ -163,7 +163,7 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 		user_tcp_conn.proto.tcp->remote_ip[3] = premot->remote_ip[3];
 		os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
 					 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
-		rec_comm.MSgId=3;
+		os_strncpy(rec_comm.MsgObj,"success",strlen("success"));
 		json_ws_send((struct jsontree_value *) &rece_1245_tree, "success",pbuf);
 		espconn_send(&user_tcp_conn,pbuf,strlen(pbuf));
 		os_free(pbuf);
@@ -184,7 +184,8 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 /*****************************扫描回调***********************************/
 void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 
-	uint8 DeviceBuffer[2000]= "wifi list:\r\n";
+	uint8 DeviceBuffer[2000]="";
+	uint8 Buffer[2000]="";
 	//remot_info是被重定义的类型已经不是结构了，不可以加struct修饰
 	remot_info *premot = NULL;
 	char *pbuf = NULL;
@@ -196,6 +197,7 @@ void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 		while (bss_link != NULL ) {
 			json_ws_send((struct jsontree_value *) &ssid_tree, "ssid_list",pbuf);
 			os_strcat(DeviceBuffer, pbuf);
+			os_strcat(DeviceBuffer, ",");
 			os_memset(pbuf, 0, 60);
 			bss_link = bss_link->next.stqe_next;
 		}
@@ -209,57 +211,14 @@ void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 			user_tcp_conn.proto.tcp->remote_ip[2] = premot->remote_ip[2];
 			user_tcp_conn.proto.tcp->remote_ip[3] = premot->remote_ip[3];
 			}
+		os_sprintf(Buffer,"{\"MsgId\":2,\n\"MsgObj\":[\n%s]\n,\"MsgStatus\":\"true\"}",DeviceBuffer);
 		/*一般情况，请在前一包数据发送成功，进入 espconn_sent_callback 后，再调用 espconn_send 发送下一包数据。*/
-		espconn_send(&user_tcp_conn, DeviceBuffer, strlen(DeviceBuffer));
+		espconn_send(&user_tcp_conn, Buffer, strlen(Buffer));
 		os_free(DeviceBuffer);
 
 	}
 }
-int ICACHE_FLASH_ATTR value_as_int(char *key_value,char length)
-{
-	uint8 i,j;
-	uint16_t order=1;
-	uint16_t key_integer=0;
-	for(i=0;i<length;i++)
-	{
-		/*将字符转化为整形*/
-		for(j=0;j<(length-i-1);j++)//根据位数求出每位应当乘10的几次幂
-		{
-			order=order*10;
-		}
-		key_integer+=((*(key_value+i)-48)*order) ;
-		order=1;
-	}
 
-	return key_integer;
-}
-uint16_t ICACHE_FLASH_ATTR comtype_parse(char* pdata,char* key)
-{
-	uint8 length,i;
-	uint16_t key_integer=0;
-
-	char *parse_begin,*parse_end;
-	/*不要再此定义数组因为除出了函数内存就释放掉了，也可定义字符串但字符串是常量，不会被释放掉，
-	 而且定义空间大小很麻烦，因此选用动态产生释放内存的方法*/
-	char *key_value = NULL;
-	key_value = (char *) os_zalloc(5);
-	parse_begin=(char *)os_strstr(pdata,key);
-
-	if (parse_begin != NULL){
-		parse_begin+=(strlen(key)+2);
-		parse_end=os_strchr(parse_begin,',');
-		length=parse_end-parse_begin;
-		os_printf("length:%d\r\n",length);
-		for(i=0;i<length;i++)
-		{
-		key_value[i]=*(parse_begin+i);
-		}
-		key_integer=value_as_int(key_value,length);
-		os_free(key_value);
-		os_printf("comm_type:%d\r\n",key_integer);
-	}
-	return key_integer;
-}
 void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 		struct espconn *pesp_conn = arg;
 		struct jsontree_context js;
@@ -268,22 +227,31 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 		//扫描配置结构
 		struct scan_config config = {NULL,NULL,0,0};
 		remot_info *premot = NULL;
-
-		char* key="MsgId";
-
 		config.ssid="shnu-mobile";
-		switch(comtype_parse(pdata,key))
+
+		rec_comm.MSgId=comtype_parse(pdata,"MsgId");
+		switch(rec_comm.MSgId)
 		{
-		case 1:
 		case 2:
-		case 4:
-		case 5:
 			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
 			json_parse(&js, pdata);
 			if(!(os_strcmp(rec_comm.MsgObj,"scan")))
 				{
-				    memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
+					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 					wifi_station_scan(&config, scan_done);
+				}
+			break;
+		case 4:
+			break;
+		case 5:
+			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
+			json_parse(&js, pdata);
+			if(!(os_strcmp(rec_comm.MsgObj,"up")))
+				{
+				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
+					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+					os_printf("zpf1000 \n");
 				}
 			break;
 		case 3: //连接WIFI
@@ -305,9 +273,11 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 	 ,IP2STR(pesp_conn->proto.tcp->remote_ip));*/
 }
 void ICACHE_FLASH_ATTR server_sentcb(void*arg) {
-	if(rec_comm.MSgId==3)
+	if(!(os_strcmp(rec_comm.MsgObj,"success")))
 	{
 		wifi_set_opmode_current(STATION_MODE);
+		 memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+		 rec_comm.CON_STATUS=0;
 	}
 	os_printf("发送成功\r\n");
 }

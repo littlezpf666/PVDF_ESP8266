@@ -175,3 +175,50 @@ json_parse(struct jsontree_context *json, char *ptrJSONMessage)
         }
     }
 }
+/*****************************自编字符转数字函数*******************************/
+int ICACHE_FLASH_ATTR value_as_int(char *key_value,char length)
+{
+	uint8 i,j;
+	uint16_t order=1;
+	uint16_t key_integer=0;
+	for(i=0;i<length;i++)
+	{
+		/*将字符转化为整形*/
+		for(j=0;j<(length-i-1);j++)//根据位数求出每位应当乘10的几次幂
+		{
+			order=order*10;
+		}
+		key_integer+=((*(key_value+i)-48)*order) ;
+		order=1;
+	}
+
+	return key_integer;
+}
+/*****************************自编解析单层键值函数*******************************/
+uint16_t ICACHE_FLASH_ATTR comtype_parse(char* pdata,char* key)
+{
+	uint8 length,i;
+	uint16_t key_integer=0;
+
+	char *parse_begin,*parse_end;
+	/*不要再此定义数组因为除出了函数内存就释放掉了，也可定义字符串但字符串是常量，不会被释放掉，
+	 而且定义空间大小很麻烦，因此选用动态产生释放内存的方法*/
+	char *key_value = NULL;
+	key_value = (char *) os_zalloc(5);
+	parse_begin=(char *)os_strstr(pdata,key);
+
+	if (parse_begin != NULL){
+		parse_begin+=(strlen(key)+2);
+		parse_end=os_strchr(parse_begin,',');
+		length=parse_end-parse_begin;
+		os_printf("length:%d\r\n",length);
+		for(i=0;i<length;i++)
+		{
+		key_value[i]=*(parse_begin+i);
+		}
+		key_integer=value_as_int(key_value,length);
+		os_free(key_value);
+		os_printf("comm_type:%d\r\n",key_integer);
+	}
+	return key_integer;
+}

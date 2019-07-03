@@ -12,7 +12,7 @@
 struct command
 {
 	char MSgId;
-	char MsgObj[7];
+	char MsgObj[9];
 	char CON_STATUS;
 	char ssid[32];
 	char password[64];

@@ -14,4 +14,6 @@
  ../../include/os_type.h ../../include/ets_sys.h ../../include/c_types.h \
  ../../include/eagle_soc.h ../../include/ip_addr.h ../../include/queue.h \
  ../../include/spi_flash.h ../../include/espconn.h ../../include/mem.h \
- ../include/udp_config.h ../include/server.h
+ ../include/udp_config.h ../include/server.h ../include/user_json.h \
+ ../../include/json/jsonparse.h ../../include/c_types.h \
+ ../../include/json/json.h ../../include/json/jsontree.h
