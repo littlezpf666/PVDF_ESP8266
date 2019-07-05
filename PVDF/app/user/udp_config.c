@@ -7,7 +7,11 @@
 #include "udp_config.h"
 #include "user_json.h"
 extern struct command rec_comm;
+<<<<<<< HEAD
 LOCAL int ICACHE_FLASH_ATTR
+=======
+int ICACHE_FLASH_ATTR
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 RXD_1_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser) {
 	int type;
 
@@ -33,28 +37,41 @@ JSONTREE_OBJECT(rece_1_tree, JSONTREE_PAIR("MsgId", &rece_1_callback),
 		);
 
 
+<<<<<<< HEAD
 LOCAL int ICACHE_FLASH_ATTR
 TXD_1_get(struct jsontree_context *js_ctx) {
 
+=======
+int ICACHE_FLASH_ATTR
+TXD_1_get(struct jsontree_context *js_ctx) {
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 	const char *path = jsontree_path_name(js_ctx, js_ctx->depth - 1);
 
 	if (os_strncmp(path, "MsgId", 5) == 0) {
 		jsontree_write_int(js_ctx, 1);
 	}
 	if (os_strncmp(path, "model", 5) == 0) {
+<<<<<<< HEAD
 
 		jsontree_write_int(js_ctx, rec_comm.opmode);
+=======
+		jsontree_write_int(js_ctx, wifi_get_opmode());
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 	}
 	if (os_strncmp(path, "device_name", 11) == 0) {
 		jsontree_write_string(js_ctx, "PVDF");
 	}
 	if (os_strncmp(path, "battery_power", 13) == 0) {
+<<<<<<< HEAD
 
 			jsontree_write_int(js_ctx, 35);
 		}
 	if (os_strncmp(path, "device_ip", 9) == 0) {
 
 		jsontree_write_string(js_ctx, rec_comm.device_ip);
+=======
+		jsontree_write_int(js_ctx, 30);
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 	}
 	if (os_strncmp(path, "MsgStatus", 9) == 0) {
 		jsontree_write_string(js_ctx, "True");
@@ -68,7 +85,10 @@ JSONTREE_CALLBACK(TXD_1_get, NULL);
 JSONTREE_OBJECT(DEVICE_INFO, JSONTREE_PAIR("model", &TXD_1_callback),
 		JSONTREE_PAIR("device_name", &TXD_1_callback),
 		JSONTREE_PAIR("battery_power", &TXD_1_callback),
+<<<<<<< HEAD
 		JSONTREE_PAIR("device_ip", &TXD_1_callback)
+=======
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 		);
 JSONTREE_OBJECT(TXD_1_tree, JSONTREE_PAIR("MsgId", &TXD_1_callback),
 		JSONTREE_PAIR("MsgObj", &DEVICE_INFO),
@@ -91,6 +111,7 @@ void ICACHE_FLASH_ATTR user_udp_recv_cb(void *arg,char * pdata,unsigned short le
 		struct	espconn	*pesp_conn	=	arg;
 		struct	ip_info	info;
 		remot_info	*premot	=	NULL;
+<<<<<<< HEAD
 
 		char *pbuf = NULL;
 		pbuf = (char *) os_zalloc(170);//要开辟足够多的空间
@@ -114,6 +135,17 @@ void ICACHE_FLASH_ATTR user_udp_recv_cb(void *arg,char * pdata,unsigned short le
 
 			json_ws_send((struct jsontree_value *) &TXD_1_tree, "decvice_inform",pbuf);
 			os_free(rec_comm.device_ip);
+=======
+		char *pbuf = NULL;
+		pbuf = (char *) os_zalloc(100);
+
+		jsontree_setup(&js, (struct jsontree_value *) &rece_1_tree, json_putchar);
+		json_parse(&js, pdata);
+		if(!(os_strcmp(rec_comm.MsgObj,"Mobile")))
+		{
+			memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+			json_ws_send((struct jsontree_value *) &TXD_1_tree, "decvice_inform",pbuf);
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 	    }
 		if (espconn_get_connection_info(pesp_conn,&premot,0)==ESPCONN_OK){
 			pesp_conn->proto.udp->remote_port  = premot->remote_port;

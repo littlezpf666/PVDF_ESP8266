@@ -163,8 +163,11 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 		user_tcp_conn.proto.tcp->remote_ip[3] = premot->remote_ip[3];
 		os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
 					 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
+<<<<<<< HEAD
 		//连接成功后将rec_comm.MsgObj置成success,供发送完JSON判断使用
 		//因为一旦切换WiFi模式远端IP就会改变，所以要等到发送成功回调函数中再改变WIFI模式
+=======
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 		os_strncpy(rec_comm.MsgObj,"success",strlen("success"));
 		json_ws_send((struct jsontree_value *) &rece_1245_tree, "success",pbuf);
 		espconn_send(&user_tcp_conn,pbuf,strlen(pbuf));
@@ -199,7 +202,11 @@ void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 		while (bss_link != NULL ) {
 			json_ws_send((struct jsontree_value *) &ssid_tree, "ssid_list",pbuf);
 			os_strcat(DeviceBuffer, pbuf);
+<<<<<<< HEAD
 			os_strcat(DeviceBuffer, ",\n");
+=======
+			os_strcat(DeviceBuffer, ",");
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 			os_memset(pbuf, 0, 60);
 			bss_link = bss_link->next.stqe_next;
 		}
@@ -215,7 +222,11 @@ void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 			os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
 										 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
 			}
+<<<<<<< HEAD
 		os_sprintf(Buffer,"{\"MsgId\":2,\n\"MsgObj\":[\n%s\n],\n\"MsgStatus\":\"true\"\n}",DeviceBuffer);
+=======
+		os_sprintf(Buffer,"{\"MsgId\":2,\n\"MsgObj\":[\n%s]\n,\"MsgStatus\":\"true\"}",DeviceBuffer);
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 		/*一般情况，请在前一包数据发送成功，进入 espconn_sent_callback 后，再调用 espconn_send 发送下一包数据。*/
 		espconn_send(&user_tcp_conn, Buffer, strlen(Buffer));
 		os_free(DeviceBuffer);
@@ -233,10 +244,13 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 		remot_info *premot = NULL;
 		config.ssid="shnu-mobile";
 
+<<<<<<< HEAD
 		os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", pesp_conn->proto.tcp->remote_port
 						 ,IP2STR(pesp_conn->proto.tcp->remote_ip));
 
        //先通过"MsgId"解析要用哪种结构树
+=======
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 		rec_comm.MSgId=comtype_parse(pdata,"MsgId");
 		switch(rec_comm.MSgId)
 		{
@@ -252,6 +266,7 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				}
 			break;
 		case 4:
+<<<<<<< HEAD
 			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
 			//解析出MsgObj
 			json_parse(&js, pdata);
@@ -261,6 +276,8 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 					espconn_disconnect(pesp_conn);
 				}
+=======
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 			break;
 		case 5:
 			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
@@ -269,6 +286,7 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+<<<<<<< HEAD
 					os_printf("zpf10000 \n");
 				}
 			if(!(os_strcmp(rec_comm.MsgObj,"down")))
@@ -295,6 +313,9 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 					os_printf("zpf00001 \n");
+=======
+					os_printf("zpf1000 \n");
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 				}
 			break;
 		case 3: //连接WIFI
@@ -319,8 +340,13 @@ void ICACHE_FLASH_ATTR server_sentcb(void*arg) {
 	if(!(os_strcmp(rec_comm.MsgObj,"success")))
 	{
 		wifi_set_opmode_current(STATION_MODE);
+<<<<<<< HEAD
 		memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 		rec_comm.CON_STATUS=0;
+=======
+		 memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+		 rec_comm.CON_STATUS=0;
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 	}
 	os_printf("发送成功\r\n");
 }

@@ -12,8 +12,11 @@
 struct command
 {
 	char MSgId;
+<<<<<<< HEAD
 	char opmode;
 	char* device_ip;
+=======
+>>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
 	char MsgObj[9];
 	char CON_STATUS;
 	char ssid[32];
