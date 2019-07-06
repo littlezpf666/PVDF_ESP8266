@@ -218,7 +218,9 @@ void at_port_print(const char *str) __attribute__((alias("uart0_sendStr")));
  * Returns      : NONE
 *******************************************************************************/
 extern struct espconn user_tcp_conn;
-char buffer[10]={0};
+extern char wait_stm32;
+char *buffer;
+char buffer_total[250];
 LOCAL void
 uart0_rx_intr_handler(void *para)
 {
@@ -231,26 +233,35 @@ uart0_rx_intr_handler(void *para)
 	CLEAR_PERI_REG_MASK(UART_INT_ENA(UART0),UART_TXFIFO_EMPTY_INT_ENA);
 	fifo_len = (READ_PERI_REG(UART_STATUS(UART0))>>UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT;
 
+    buffer=(char*)os_zalloc(fifo_len+1);
 	for(idx=0;idx<fifo_len;idx++) {
 		 d_tmp = READ_PERI_REG(UART_FIFO(UART0)) & 0xFF;
 		 buffer[idx]=d_tmp;
 		 //uart_tx_one_char(UART0, d_tmp);
 	 }
-	os_printf("%s",buffer);
-	if (espconn_get_connection_info(&user_tcp_conn,&premot,0)==ESPCONN_OK){
-			os_printf("获取远端IP成功\r\n");
-			os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
-				 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
-			user_tcp_conn.proto.tcp->remote_port  = premot->remote_port;
-			user_tcp_conn.proto.tcp->remote_ip[0] = premot->remote_ip[0];
-			user_tcp_conn.proto.tcp->remote_ip[1] = premot->remote_ip[1];
-			user_tcp_conn.proto.tcp->remote_ip[2] = premot->remote_ip[2];
-			user_tcp_conn.proto.tcp->remote_ip[3] = premot->remote_ip[3];
-			os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
-						 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
-	espconn_send(&user_tcp_conn,buffer,strlen(buffer));}
-	WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR|UART_RXFIFO_TOUT_INT_CLR);
-	uart_rx_intr_enable(UART0);
+
+	if(wait_stm32==1)
+	{
+		os_strcat(buffer_total,buffer);
+		if(fifo_len<100)
+		{
+			wait_stm32=0;
+
+			if (espconn_get_connection_info(&user_tcp_conn,&premot,0)==ESPCONN_OK){
+				user_tcp_conn.proto.tcp->remote_port  = premot->remote_port;
+				user_tcp_conn.proto.tcp->remote_ip[0] = premot->remote_ip[0];
+				user_tcp_conn.proto.tcp->remote_ip[1] = premot->remote_ip[1];
+				user_tcp_conn.proto.tcp->remote_ip[2] = premot->remote_ip[2];
+				user_tcp_conn.proto.tcp->remote_ip[3] = premot->remote_ip[3];
+				espconn_send(&user_tcp_conn,buffer_total,strlen(buffer_total));
+			}
+			os_free(buffer_total);
+		}
+
+		os_free(buffer);
+	}
+		WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR|UART_RXFIFO_TOUT_INT_CLR);
+		uart_rx_intr_enable(UART0);
 }
 
 /******************************************************************************

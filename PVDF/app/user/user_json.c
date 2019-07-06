@@ -211,11 +211,11 @@ uint16_t ICACHE_FLASH_ATTR comtype_parse(char* pdata,char* key)
 		parse_begin+=(strlen(key)+2);
 		parse_end=os_strchr(parse_begin,',');
 		length=parse_end-parse_begin;
-<<<<<<< HEAD
+
 		//os_printf("length:%d\r\n",length);
-=======
+
 		os_printf("length:%d\r\n",length);
->>>>>>> dd00507a94c22f8e56aa46118ecc51c4e4d9c635
+
 		for(i=0;i<length;i++)
 		{
 		key_value[i]=*(parse_begin+i);
