@@ -201,7 +201,6 @@ void ICACHE_FLASH_ATTR scan_done(void *arg, STATUS status) {
 
 			os_strcat(DeviceBuffer, ",\n");
 
-			os_strcat(DeviceBuffer, ",");
 
 			os_memset(pbuf, 0, 60);
 			bss_link = bss_link->next.stqe_next;
@@ -305,7 +304,7 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 					os_sprintf(pbuf_stm32,"zpf00010,%d,%d,%d \n",rec_comm.GET_SSID_INFO,TCP_PORT,UDP_PORT);
 					wait_stm32=1;
 				}
-			if(!(os_strcmp(rec_comm.MsgObj,"down")))
+			if(!(os_strcmp(rec_comm.MsgObj,"core")))
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
@@ -334,14 +333,16 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 	 ,IP2STR(pesp_conn->proto.tcp->remote_ip));*/
 }
 void ICACHE_FLASH_ATTR server_sentcb(void*arg) {
+	struct espconn *pesp_conn = arg;
+	os_printf("发送成功\r\n");
 	if(!(os_strcmp(rec_comm.MsgObj,"success")))
 	{
 		wifi_set_opmode_current(STATION_MODE);
 
 		memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-		rec_comm.CON_STATUS=0;
+		espconn_disconnect(pesp_conn);
 	}
-	os_printf("发送成功\r\n");
+
 }
 void ICACHE_FLASH_ATTR server_disconcb(void*arg) {
 	struct ip_info ap_ip;
