@@ -149,8 +149,10 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 
 	status=wifi_station_get_connect_status();
 	if(status==STATION_GOT_IP){//	STATION_GOT_IP
+		wifi_set_opmode_current(STATION_MODE);
+		rec_comm.opmode=STATION_MODE;
 
-		if (espconn_get_connection_info(&user_tcp_conn,&premot,0)==ESPCONN_OK){
+		/*if (espconn_get_connection_info(&user_tcp_conn,&premot,0)==ESPCONN_OK){
 		os_printf("获取远端IP成功\r\n");
 		os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
 			 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
@@ -169,7 +171,7 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 		json_ws_send((struct jsontree_value *) &rece_1245_tree, "success",pbuf);
 		espconn_send(&user_tcp_conn,pbuf,strlen(pbuf));
 		os_free(pbuf);
-		}
+		}*/
 
 		return;
 	}
@@ -178,7 +180,9 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 		{
 			count=0;
 			os_printf("None station connect !\n");
+			return;
 		}
+
 	}
 	os_timer_arm(&connect_timer,2000,NULL);
 }
@@ -257,7 +261,7 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 		switch(rec_comm.MSgId)
 		{
 		case 2:
-			/*jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
+			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
 			//解析出MsgObj
 			json_parse(&js, pdata);
 			if(!(os_strcmp(rec_comm.MsgObj,"scan")))
@@ -266,7 +270,7 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 					wifi_station_scan(&config, scan_done);
 				}
-			break;*/
+			break;
 		case 4:
 
 			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
@@ -298,14 +302,14 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-					os_sprintf(pbuf_stm32,"zpf10000,%d,%d,%d \n",rec_comm.GET_SSID_INFO,TCP_PORT,UDP_PORT);
+					os_sprintf(pbuf_stm32,"zpf10000,%d,%d,%d \n",rec_comm.opmode,TCP_PORT,UDP_PORT);
 					wait_stm32=1;
 				}
 			if(!(os_strcmp(rec_comm.MsgObj,"down")))
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-					os_sprintf(pbuf_stm32,"zpf01000,%d,%d,%d \n",rec_comm.GET_SSID_INFO,TCP_PORT,UDP_PORT);
+					os_sprintf(pbuf_stm32,"zpf01000,%d,%d,%d \n",rec_comm.opmode,TCP_PORT,UDP_PORT);
 					wait_stm32=1;
 				}
 
@@ -313,21 +317,21 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-					os_sprintf(pbuf_stm32,"zpf00100,%d,%d,%d \n",rec_comm.GET_SSID_INFO,TCP_PORT,UDP_PORT);
+					os_sprintf(pbuf_stm32,"zpf00100,%d,%d,%d \n",rec_comm.opmode,TCP_PORT,UDP_PORT);
 					wait_stm32=1;
 				}
 			if(!(os_strcmp(rec_comm.MsgObj,"left")))
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-					os_sprintf(pbuf_stm32,"zpf00010,%d,%d,%d \n",rec_comm.GET_SSID_INFO,TCP_PORT,UDP_PORT);
+					os_sprintf(pbuf_stm32,"zpf00010,%d,%d,%d \n",rec_comm.opmode,TCP_PORT,UDP_PORT);
 					wait_stm32=1;
 				}
 			if(!(os_strcmp(rec_comm.MsgObj,"core")))
 				{
 				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-					os_sprintf(pbuf_stm32,"zpf00001,%d,%d,%d \n",rec_comm.GET_SSID_INFO,TCP_PORT,UDP_PORT);
+					os_sprintf(pbuf_stm32,"zpf00001,%d,%d,%d \n",rec_comm.opmode,TCP_PORT,UDP_PORT);
 					wait_stm32=1;
 				}
 			if(wait_stm32==1)
@@ -342,6 +346,12 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				os_memcpy(&stationConf.password, rec_comm.password, 64);
 				wifi_station_set_config_current(&stationConf);
 				wifi_station_connect();
+
+				os_strncpy(rec_comm.MsgObj,"success",strlen("success"));
+				json_ws_send((struct jsontree_value *) &rece_1245_tree, "success",pbuf);
+				espconn_send(&user_tcp_conn,pbuf,strlen(pbuf));
+				os_free(pbuf);
+
 				os_timer_setfn(&connect_timer, wifi_connected, NULL);
 				os_timer_arm(&connect_timer, 2000, NULL);
 			}
@@ -369,7 +379,7 @@ void ICACHE_FLASH_ATTR server_sentcb(void*arg) {
 	if(!(os_strcmp(rec_comm.MsgObj,"success")))
 	{
 		wifi_set_opmode_current(STATION_MODE);
-
+		rec_comm.opmode=STATION_MODE;
 		memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 		//由于AP消失后不会产生TCP断开，会导致之后TCP连接情况误判，因此主动断开TCP
 		espconn_disconnect(pesp_conn);

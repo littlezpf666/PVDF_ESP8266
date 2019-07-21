@@ -80,8 +80,8 @@ void user_init()
 
 	wifi_set_opmode_current(STATIONAP_MODE);
 
-	os_strcpy(apConfig.ssid, "PVDF");
-	apConfig.ssid_len = strlen("PVDF");
+	os_strcpy(apConfig.ssid, "PVDF1");
+	apConfig.ssid_len = strlen("PVDF1");
 	os_strcpy(apConfig.password,"12345678");
 	apConfig.authmode = AUTH_WPA_WPA2_PSK;
 	apConfig.max_connection =4;//最大连接数量，最大支持四个，默认四个
