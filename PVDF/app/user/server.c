@@ -16,10 +16,10 @@ wifi_scan_get(struct jsontree_context *js_ctx) {
 	//uint8_t MAC[18];
 	const char *path = jsontree_path_name(js_ctx, js_ctx->depth - 1);
 
-	if (os_strncmp(path, "ssid", 4) == 0) {
+	if (os_strncmp(path, "Ssid", 4) == 0) {
 		jsontree_write_string(js_ctx, bss_link->ssid);
 	}
-	if (os_strncmp(path, "rssi", 4) == 0) {
+	if (os_strncmp(path, "Rssi", 4) == 0) {
 			jsontree_write_int(js_ctx, bss_link->rssi);
 		}
 	/*if (os_strncmp(path, "MAC", 3) == 0) {
@@ -31,8 +31,8 @@ wifi_scan_get(struct jsontree_context *js_ctx) {
 }
 LOCAL struct jsontree_callback wifi_scan_callback =
 JSONTREE_CALLBACK(wifi_scan_get, NULL);
-JSONTREE_OBJECT(ssid_tree, JSONTREE_PAIR("ssid", &wifi_scan_callback),
-		JSONTREE_PAIR("rssi", &wifi_scan_callback));
+JSONTREE_OBJECT(ssid_tree, JSONTREE_PAIR("Ssid", &wifi_scan_callback),
+		JSONTREE_PAIR("Rssi", &wifi_scan_callback));
 
 /*****************************CJSON 3接收指令：连接指定wifi***********************************/
 int ICACHE_FLASH_ATTR
@@ -47,13 +47,13 @@ wifi_conn_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser)
 			}
 			if (msgobj) {
 				//与上面的"MsgObj"不在同一周期内被捕捉
-				if (jsonparse_strcmp_value(parser, "ssid") == 0) {
+				if (jsonparse_strcmp_value(parser, "Ssid") == 0) {
 					jsonparse_next(parser);
 					jsonparse_next(parser);
 					jsonparse_copy_value(parser, rec_comm.ssid,sizeof(rec_comm.ssid));
 					os_printf("ssid:%s\r\n", rec_comm.ssid);
 
-				} else if (jsonparse_strcmp_value(parser, "password") == 0) {
+				} else if (jsonparse_strcmp_value(parser, "Password") == 0) {
 					jsonparse_next(parser);
 					jsonparse_next(parser);
 					jsonparse_copy_value(parser, rec_comm.password,
@@ -71,8 +71,8 @@ wifi_conn_parse(struct jsontree_context *js_ctx, struct jsonparse_state *parser)
 
 LOCAL struct jsontree_callback rece_3_tree_callback =
 JSONTREE_CALLBACK(NULL, wifi_conn_parse);
-JSONTREE_OBJECT(wifi_scan_tree, JSONTREE_PAIR("ssid", &rece_3_tree_callback),
-		JSONTREE_PAIR("password", &rece_3_tree_callback)
+JSONTREE_OBJECT(wifi_scan_tree, JSONTREE_PAIR("Ssid", &rece_3_tree_callback),
+		JSONTREE_PAIR("Password", &rece_3_tree_callback)
 		);
 JSONTREE_OBJECT(rece_3_tree, JSONTREE_PAIR("MsgId", &rece_3_tree_callback),
 		JSONTREE_PAIR("MsgObj", &wifi_scan_tree),
@@ -149,6 +149,7 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 
 	status=wifi_station_get_connect_status();
 	if(status==STATION_GOT_IP){//	STATION_GOT_IP
+
 		if (espconn_get_connection_info(&user_tcp_conn,&premot,0)==ESPCONN_OK){
 		os_printf("获取远端IP成功\r\n");
 		os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", user_tcp_conn.proto.tcp->remote_port
@@ -162,7 +163,7 @@ void ICACHE_FLASH_ATTR wifi_connected(void *arg){
 					 ,IP2STR(user_tcp_conn.proto.tcp->remote_ip));
 
 		//连接成功后将rec_comm.MsgObj置成success,供发送完JSON判断使用
-		//因为一旦切换WiFi模式远端IP就会改变，所以要等到发送成功回调函数中再改变WIFI模式
+		//因为一旦切换WiFi模式AP将会消失，将无法发送数据，所以要等到发送成功回调函数中再改变WIFI模式
 
 		os_strncpy(rec_comm.MsgObj,"success",strlen("success"));
 		json_ws_send((struct jsontree_value *) &rece_1245_tree, "success",pbuf);
@@ -235,21 +236,28 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 		//扫描配置结构
 		struct scan_config config = {NULL,NULL,0,0};
 		remot_info *premot = NULL;
+		char *pbuf;
+		pbuf=(char *)os_zalloc(60);
 		char pbuf_stm32[25] ;
 
-		config.ssid="shnu-mobile";
+		//config.ssid="shnu-mobile";
 
 
-		os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", pesp_conn->proto.tcp->remote_port
-						 ,IP2STR(pesp_conn->proto.tcp->remote_ip));
+		//os_printf("remote_port:%d,remote_IP:"IPSTR"\r\n", pesp_conn->proto.tcp->remote_port
+						 //,IP2STR(pesp_conn->proto.tcp->remote_ip));
 
+		os_printf("收到%s",pdata);
        //先通过"MsgId"解析要用哪种结构树
+		if(!(os_strcmp(pdata,"*")))
+		{
+			espconn_send(pesp_conn,"*",strlen("*"));
+		}
 
 		rec_comm.MSgId=comtype_parse(pdata,"MsgId");
 		switch(rec_comm.MSgId)
 		{
 		case 2:
-			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
+			/*jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
 			//解析出MsgObj
 			json_parse(&js, pdata);
 			if(!(os_strcmp(rec_comm.MsgObj,"scan")))
@@ -258,17 +266,28 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
 					wifi_station_scan(&config, scan_done);
 				}
-			break;
+			break;*/
 		case 4:
 
 			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
 			//解析出MsgObj
 			json_parse(&js, pdata);
-			if(!(os_strcmp(rec_comm.MsgObj,"close")))
+			if(!(os_strcmp(rec_comm.MsgObj,"isIdle")))
 				{
-				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
-					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
-					espconn_disconnect(pesp_conn);
+				if (rec_comm.CON_STATUS == 0) {
+						rec_comm.MSgId=4;
+						json_ws_send((struct jsontree_value *) &rece_1245_tree, "idle1",pbuf);
+						espconn_send(pesp_conn,pbuf,strlen(pbuf));
+						rec_comm.CON_STATUS++;
+						os_printf("连接设备状态idle\r\n");
+					}
+					else {
+						rec_comm.MSgId=4;
+						json_ws_send((struct jsontree_value *) &rece_1245_tree, "busy1",pbuf);
+						espconn_send(pesp_conn,pbuf,strlen(pbuf));
+						os_printf("连接设备状态busy\r\n");
+					}
+					os_free(pbuf);
 				}
 
 			break;
@@ -327,6 +346,18 @@ void ICACHE_FLASH_ATTR server_recvcb(void*arg, char*pdata, unsigned short len) {
 				os_timer_arm(&connect_timer, 2000, NULL);
 			}
 			break;
+		case 6:
+			jsontree_setup(&js, (struct jsontree_value *) &rece_1245_tree, json_putchar);
+			//解析出MsgObj
+			json_parse(&js, pdata);
+			if(!(os_strcmp(rec_comm.MsgObj,"close")))
+				{
+				//将rec_comm.MsgObj置0，防止rec_comm.MsgId正确，但rec_comm.MsgObj无法解析，不刷新误判问题
+					memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+					espconn_disconnect(pesp_conn);
+				}
+
+			break;
 		}
 	//espconn_send(pesp_conn, pdata, os_strlen(pdata));
 	/*os_printf("local_port3:%d,remote_IP:"IPSTR"\r\n", pesp_conn->proto.tcp->local_port
@@ -340,6 +371,7 @@ void ICACHE_FLASH_ATTR server_sentcb(void*arg) {
 		wifi_set_opmode_current(STATION_MODE);
 
 		memset(rec_comm.MsgObj,0,strlen(rec_comm.MsgObj));
+		//由于AP消失后不会产生TCP断开，会导致之后TCP连接情况误判，因此主动断开TCP
 		espconn_disconnect(pesp_conn);
 	}
 

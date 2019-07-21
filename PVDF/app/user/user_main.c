@@ -26,6 +26,7 @@ void ICACHE_FLASH_ATTR check_station(void *arg){
 	}
 
 }
+extern struct command rec_comm;
 /*************************WiFi连接事件回调函数***********************************/
 void ICACHE_FLASH_ATTR AP_be_connected_cb(System_Event_t *evt){
 	//static uint8 machine_num=0;
@@ -45,11 +46,25 @@ void ICACHE_FLASH_ATTR AP_be_connected_cb(System_Event_t *evt){
 		os_timer_setfn(&station_check,check_station,NULL);
 		os_timer_arm(&station_check,2000,NULL);
 		break;
+	/*case EVENT_STAMODE_CONNECTED:
+		server_init(TCP_PORT);
+		os_printf("TCP初始化成功\n\r");
+		user_udp_init(UDP_PORT);
+		os_printf("UDP初始化成功\n\r");
+		if(os_strcmp(rec_comm.MsgObj,"success"))
+		{
+		wifi_set_opmode_current(STATION_MODE);
+		}
+		break;*/
 	default:
 		break;
 	}
 }
 void to_scan(void) {
+	server_init(TCP_PORT);
+	os_printf("TCP初始化成功\n\r");
+	user_udp_init(UDP_PORT);
+	os_printf("UDP初始化成功\n\r");
 	wifi_set_event_handler_cb(AP_be_connected_cb);
 
 }

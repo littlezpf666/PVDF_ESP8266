@@ -41,21 +41,21 @@ TXD_1_get(struct jsontree_context *js_ctx) {
 	if (os_strncmp(path, "MsgId", 5) == 0) {
 		jsontree_write_int(js_ctx, 1);
 	}
-	if (os_strncmp(path, "model", 5) == 0) {
+	if (os_strncmp(path, "NetworkMode", 5) == 0) {
 
 
 		jsontree_write_int(js_ctx, rec_comm.opmode);
 
 	}
-	if (os_strncmp(path, "device_name", 11) == 0) {
+	if (os_strncmp(path, "Name", 11) == 0) {
 		jsontree_write_string(js_ctx, "PVDF");
 	}
-	if (os_strncmp(path, "battery_power", 13) == 0) {
+	if (os_strncmp(path, "Power", 13) == 0) {
 
 
 			jsontree_write_int(js_ctx, 35);
 		}
-	if (os_strncmp(path, "device_ip", 9) == 0) {
+	if (os_strncmp(path, "Ip", 9) == 0) {
 
 		jsontree_write_string(js_ctx, rec_comm.device_ip);
 
@@ -69,11 +69,11 @@ TXD_1_get(struct jsontree_context *js_ctx) {
 LOCAL struct jsontree_callback TXD_1_callback =
 JSONTREE_CALLBACK(TXD_1_get, NULL);
 
-JSONTREE_OBJECT(DEVICE_INFO, JSONTREE_PAIR("model", &TXD_1_callback),
-		JSONTREE_PAIR("device_name", &TXD_1_callback),
-		JSONTREE_PAIR("battery_power", &TXD_1_callback),
+JSONTREE_OBJECT(DEVICE_INFO, JSONTREE_PAIR("NetworkMode", &TXD_1_callback),
+		JSONTREE_PAIR("Name", &TXD_1_callback),
+		JSONTREE_PAIR("Power", &TXD_1_callback),
 
-		JSONTREE_PAIR("device_ip", &TXD_1_callback)
+		JSONTREE_PAIR("Ip", &TXD_1_callback)
 
 
 		);

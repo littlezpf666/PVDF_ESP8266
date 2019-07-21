@@ -212,9 +212,9 @@ uint16_t ICACHE_FLASH_ATTR comtype_parse(char* pdata,char* key)
 		parse_end=os_strchr(parse_begin,',');
 		length=parse_end-parse_begin;
 
-		//os_printf("length:%d\r\n",length);
 
-		os_printf("length:%d\r\n",length);
+
+		//os_printf("length:%d\r\n",length);
 
 		for(i=0;i<length;i++)
 		{
